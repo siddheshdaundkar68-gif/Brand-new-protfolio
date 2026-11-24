@@ -1,43 +1,90 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+name: Deploy to GitHub Pages
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  # Single deploy job since we're just deploying
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Organize files into folders
+        run: |
+          while IFS='|' read -r name dest; do
+            [ -z "$name" ] && continue
+            if [ -f "$name" ] && [ ! -f "$dest" ]; then
+              mkdir -p "$(dirname "$dest")"
+              mv "$name" "$dest"
+            fi
+          done <<'MAP'
+          Siddhesh_Daundkar_Resume.pdf|public/assets/Siddhesh_Daundkar_Resume.pdf
+          og-image.jpg|public/assets/og-image.jpg
+          portrait-1100.webp|public/assets/portrait-1100.webp
+          portrait-420.webp|public/assets/portrait-420.webp
+          portrait-720.webp|public/assets/portrait-720.webp
+          favicon.svg|public/favicon.svg
+          build-images.mjs|scripts/build-images.mjs
+          About.tsx|src/components/About.tsx
+          Achievements.tsx|src/components/Achievements.tsx
+          ContinueWatching.tsx|src/components/ContinueWatching.tsx
+          CustomCursor.tsx|src/components/CustomCursor.tsx
+          EpisodeCard.tsx|src/components/EpisodeCard.tsx
+          FinalCTA.tsx|src/components/FinalCTA.tsx
+          Hero.tsx|src/components/Hero.tsx
+          Navbar.tsx|src/components/Navbar.tsx
+          OpeningSequence.tsx|src/components/OpeningSequence.tsx
+          Originals.tsx|src/components/Originals.tsx
+          PlayIntro.tsx|src/components/PlayIntro.tsx
+          Poster.tsx|src/components/Poster.tsx
+          ProfileSelector.tsx|src/components/ProfileSelector.tsx
+          ProjectCard.tsx|src/components/ProjectCard.tsx
+          ProjectModal.tsx|src/components/ProjectModal.tsx
+          Rail.tsx|src/components/Rail.tsx
+          ResumeModal.tsx|src/components/ResumeModal.tsx
+          ResumeViewer.tsx|src/components/ResumeViewer.tsx
+          Scene.tsx|src/components/Scene.tsx
+          Seasons.tsx|src/components/Seasons.tsx
+          Skills.tsx|src/components/Skills.tsx
+          TopPicks.tsx|src/components/TopPicks.tsx
+          fx.tsx|src/components/fx.tsx
+          portfolio.ts|src/data/portfolio.ts
+          sectionProgress.ts|src/hooks/sectionProgress.ts
+          smoothScroll.tsx|src/hooks/smoothScroll.tsx
+          useMedia.ts|src/hooks/useMedia.ts
+          App.tsx|src/App.tsx
+          index.css|src/index.css
+          main.tsx|src/main.tsx
+          vite-env.d.ts|src/vite-env.d.ts
+          MAP
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
   deploy:
+    needs: build
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Upload entire repository
-          path: '.'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+      - id: deployment
+        uses: actions/deploy-pages@v4
